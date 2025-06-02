@@ -1,0 +1,50 @@
+import { IValidationResult } from '../../types';
+import { Component } from '../presenter/Component';
+import { EventEmitter } from '../presenter/events';
+import { ensureElement } from '../utils/utils';
+
+export class FormEmailPhone extends Component<HTMLFormElement> {
+  private emailInput: HTMLInputElement;
+  private phoneInput: HTMLInputElement;
+  private submitButton: HTMLButtonElement;
+  private errors: HTMLElement;
+  private emitter: EventEmitter;
+
+  constructor(container: HTMLFormElement, emitter: EventEmitter) {
+    super(container);
+    this.emailInput = ensureElement<HTMLInputElement>('.form__input[name="email"]', container);
+    this.phoneInput = ensureElement<HTMLInputElement>('.form__input[name="phone"]', container);
+    this.submitButton = ensureElement<HTMLButtonElement>('.form__button', container);
+    this.errors = ensureElement<HTMLElement>('.form__errors', container);
+    this.emitter = emitter;
+
+    this.emailInput.addEventListener('input', () => {
+      this.emitter.emit('order:email_phone_validated', {
+        email: this.emailInput.value,
+        phone: this.phoneInput.value,
+      });
+    });
+
+    this.phoneInput.addEventListener('input', () => {
+      this.emitter.emit('order:email_phone_validated', {
+        email: this.emailInput.value,
+        phone: this.phoneInput.value,
+      });
+    });
+
+    this.submitButton.addEventListener('click', () => {
+      this.emitter.emit('order:email_phone_submit', {
+        email: this.emailInput.value,
+        phone: this.phoneInput.value,
+      });
+    });
+  }
+
+  setValid(isValid: boolean): void {
+    this.setDisabled(this.submitButton, !isValid);
+  }
+
+  setErrors(errors: string[]): void {
+    this.setText(this.errors, errors.join(', '));
+  }
+}

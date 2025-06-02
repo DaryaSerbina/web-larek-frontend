@@ -1,0 +1,38 @@
+import { IProduct, IProductList } from '../../types';
+import { EventEmitter } from '../presenter/events';
+import { Api } from '../presenter/api';
+import { API_URL } from '../utils/constants';
+
+export class AppState {
+  private catalog: IProduct[] = [];
+  private preview: IProduct | null = null;
+  private api: Api;
+  private emitter: EventEmitter;
+
+  constructor(emitter: EventEmitter) {
+    this.api = new Api(API_URL);
+    this.emitter = emitter;
+  }
+
+  async setCatalog(): Promise<void> {
+    try {
+      const data = (await this.api.get('/products')) as IProductList;
+      this.catalog = data.items?.filter((item) => item.image && typeof item.image === 'string') || []; // Filter valid images
+      console.log('Catalog loaded:', this.catalog); // Debug
+      this.emitter.emit('catalog:changed', this.catalog);
+    } catch (error) {
+      console.error('Failed to fetch catalog:', error);
+      this.catalog = [];
+      this.emitter.emit('catalog:changed', this.catalog); // Emit even on failure
+    }
+  }
+
+  setPreview(product: IProduct | null): void {
+    this.preview = product;
+    this.emitter.emit('preview:changed', this.preview);
+  }
+
+  getCatalog(): IProduct[] {
+    return this.catalog;
+  }
+}
