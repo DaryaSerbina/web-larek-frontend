@@ -41,10 +41,11 @@ export class FormEmailPhone extends Component<HTMLFormElement> {
   }
 
   setValid(isValid: boolean): void {
-    this.setDisabled(this.submitButton, !isValid);
+    this.setDisabled(this.submitButton, isValid);
   }
 
   setErrors(errors: string[]): void {
     this.setText(this.errors, errors.join(', '));
   }
+  
 }

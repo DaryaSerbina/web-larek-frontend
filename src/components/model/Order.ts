@@ -2,9 +2,10 @@ import { IOrderForm, IValidationResult, IBasketProduct, IOrderResult } from '../
 import { EventEmitter } from '../presenter/events';
 import { Api } from '../presenter/api';
 import { API_URL } from '../utils/constants';
+import { FormPaymentAddress } from '../view/FormPaymentAddress';
 
-export class Order {
-  private order: IOrderForm = {
+export class Order<T> extends FormPaymentAddress<IOrderForm> {
+  protected order: IOrderForm = {
     payment: 'card',
     email: '',
     phone: '',
@@ -13,17 +14,17 @@ export class Order {
     items: [],
   };
   private api: Api;
-  private emitter: EventEmitter;
+  protected emitter: EventEmitter;
 
-  constructor(emitter: EventEmitter) {
+  constructor(container: HTMLFormElement, emitter: EventEmitter) {
+    super(container, emitter);
     this.api = new Api(API_URL);
     this.emitter = emitter;
   }
 
-  setPayment(payment: 'card' | 'cash'): void {
-    this.order.payment = payment;
-    this.emitter.emit('order:payment_address_validated', this.validateOrder());
-  }
+  // setPayment(payment: 'card' | 'cash'): void {
+  //   this.order.payment = payment;
+  // }
 
   setAddress(address: string): void {
     this.order.address = address;
@@ -46,6 +47,21 @@ export class Order {
 
   setTotal(total: number | null): void {
     this.order.total = total;
+  }
+
+  validateFormPaymentAddres(): IValidationResult {
+    const errors: string[] = [];
+    if (!this.order.address.trim()) errors.push('Address is required');
+    console.log( errors)
+    return { isValid: errors.length === 0, errors };
+  }
+
+  
+  validateFormEmailPhone(): IValidationResult {
+    const errors: string[] = [];
+    if (!this.order.email || !/\S+@\S+\.\S+/.test(this.order.email)) errors.push('Invalid email');
+    if (!this.order.phone.trim()) errors.push('Phone is required');
+    return { isValid: errors.length === 0, errors };
   }
 
   validateOrder(): IValidationResult {

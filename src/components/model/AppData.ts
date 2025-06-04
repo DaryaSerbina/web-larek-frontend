@@ -5,7 +5,7 @@ import { API_URL } from '../utils/constants';
 
 export class AppState {
   private catalog: IProduct[] = [];
-  private preview: IProduct | null = null;
+  private preview: IProduct;
   private api: Api;
   private emitter: EventEmitter;
 
@@ -16,19 +16,23 @@ export class AppState {
 
   async setCatalog(): Promise<void> {
     try {
-      const data = (await this.api.get('/products')) as IProductList;
-      this.catalog = data.items?.filter((item) => item.image && typeof item.image === 'string') || []; // Filter valid images
-      console.log('Catalog loaded:', this.catalog); // Debug
+      const data = (await this.api.get('/product')) as IProductList;
+      this.catalog = (data.items || []).map(item => ({
+        ...item,
+        image: item.image && typeof item.image === 'string' ? item.image : 'https://placehold.co/100x100'
+      }));
+      console.log('Catalog loaded:', this.catalog);
       this.emitter.emit('catalog:changed', this.catalog);
     } catch (error) {
       console.error('Failed to fetch catalog:', error);
       this.catalog = [];
-      this.emitter.emit('catalog:changed', this.catalog); // Emit even on failure
+      this.emitter.emit('catalog:changed', this.catalog);
     }
   }
 
   setPreview(product: IProduct | null): void {
     this.preview = product;
+    console.log('Setting preview:', product);
     this.emitter.emit('preview:changed', this.preview);
   }
 

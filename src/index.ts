@@ -14,92 +14,140 @@ import { IProduct, IOrderResult, IBasketProduct, IBasket, IValidationResult } fr
 import './scss/styles.scss';
 
 const emitter = new EventEmitter();
-const appState = new AppState(emitter);
 const basket = new Basket(emitter);
-const order = new Order(emitter);
+const appState = new AppState(emitter);
+//const order = new Order(emitter);
 const page = new Page(document.body, emitter, basket);
 const modal = new Modal(ensureElement<HTMLElement>('.modal'), emitter);
+const orderTemplate = ensureElement<HTMLTemplateElement>('#order');
+const order = new Order(cloneTemplate(orderTemplate), emitter);
 
 emitter.on('catalog:changed', (products: IProduct[]): void => {
-  console.log('Catalog changed:', products); // Debug
-  page.setCatalog(products);
+  console.log('Catalog changed:', products);
+  if (products.length === 0) {
+    console.warn('No products to display');
+    page.setCatalog([{
+      id: 'placeholder',
+      title: 'Нет товаров',
+      image: 'https://placehold.co/100x100',
+      price: null,
+      description: '',
+      category: ''
+    }]);
+  } else {
+    page.setCatalog(products);
+  }
 });
 
 emitter.on('card:select', (product: IProduct): void => {
-  console.log('Card selected:', product); // Debug
+  console.log('Card selected:', product);
   appState.setPreview(product);
 });
 
 emitter.on('preview:changed', (product: IProduct | null): void => {
-  console.log('Preview changed:', product); // Debug
+  console.log('Preview changed:', product);
   if (product) {
+   {
+    console.log('Opening modal for product:', product.id);
     const cardElement = cloneTemplate<HTMLElement>('#card-preview');
+    cardElement.dataset.id = product.id;
     const card = new Card(cardElement, emitter, 'preview');
     card.setTitle(product.title);
+    card.setCategory(product.category);
     card.setImageSrc(product.image);
     card.setPrice(product.price);
     card.setDescription(product.description || '');
-    card.setButtonText(
-      basket.getBasket().items.some((item: IBasketProduct) => item.id === product.id) ? 'В корзине' : 'Купить'
-    );
-    modal.contentElement = cardElement;
+    card.setButtonText(basket.getBasket().items.some(item => item.id === product.id) ? 'В корзине' : 'Купить');
+    modal.content = cardElement;
     modal.open();
   }
+}});
+
+emitter.on('basket:open', (): void => {
+  console.log('Opening basket');
+  const basketElement = cloneTemplate<HTMLElement>('#basket');
+  const basketView = new BasketView(basketElement, emitter);
+  basketView.setItems(basket.getBasket().items);
+  basketView.setTotal(basket.getBasket().total);
+  modal.content = basketElement;
+  modal.open();
 });
 
 emitter.on('basket:changed', (basketData: IBasket): void => {
-  console.log('Basket changed:', basketData); // Debug
+  console.log('Basket changed:', basketData);
+  if (basketData === undefined) {
+    page.setCounter(0);
+    const basketElement = cloneTemplate<HTMLElement>('#basket');
+    const basketView = new BasketView(basketElement, emitter);
+    basketView.setItems([]); 
+    basketView.setTotal(0); 
+    modal.content = basketElement;
+    modal.open(); 
+    return;
+  }
+
   page.setCounter(basketData.items.length);
   const basketElement = cloneTemplate<HTMLElement>('#basket');
   const basketView = new BasketView(basketElement, emitter);
   basketView.setItems(basketData.items);
   basketView.setTotal(basketData.total);
-  modal.contentElement = basketElement;
+  modal.content = basketElement;
   modal.open();
 });
 
 emitter.on('basket:add', (data: { id: string }): void => {
-  console.log('Adding to basket:', data); // Debug
+  console.log('Adding to basket:', data);
+  if (!data.id) {
+    console.warn('No product ID provided for basket:add');
+    return;
+  }
   const product = appState.getCatalog().find((p) => p.id === data.id);
   if (product) {
     basket.addToBasket(product);
-    const cardElement = cloneTemplate<HTMLElement>('#card-preview');
-    const card = new Card(cardElement, emitter, 'preview');
-    card.setButtonText('В корзине');
-    modal.contentElement = cardElement;
+    modal.close(); // Закрываем модал после добавления
+  } else {
+    console.warn('Product not found:', data.id);
   }
 });
 
 emitter.on('basket:remove', (data: { id: string }): void => {
-  console.log('Removing from basket:', data); // Debug
+  console.log('Removing from basket:', data);
   basket.removeFromBasket(data.id);
 });
 
-emitter.on('basket:open_order', (): void => {
-  console.log('Opening order form'); // Debug
-  const formElement = cloneTemplate<HTMLFormElement>('#form-payment-address');
-  const form = new FormPaymentAddress(formElement, emitter);
-  modal.contentElement = formElement;
-  modal.open();
+emitter.on('_order', (): void => {
+  console.log('Opening order form');
+  // const formElement = cloneTemplate<HTMLFormElement>('#order');
+  // const form = new FormPaymentAddress(formElement, emitter);
+  modal.render({
+        content: order.render({
+            phone: '',
+            email: '',
+            valid: false,
+            errors: []
+        })
+    });
 });
 
 emitter.on('order:payment_address_validated', (validation: IValidationResult): void => {
-  console.log('Payment address validated:', validation); // Debug
-  const formElement = ensureElement<HTMLFormElement>('.form');
-  const form = new FormPaymentAddress(formElement, emitter);
-  form.setValid(validation.isValid);
-  form.setErrors(validation.errors);
+  console.log('Payment address validated:', validation);
+  // const formElement = ensureElement<HTMLFormElement>('#order');
+  // const form = new FormPaymentAddress(formElement, emitter);
+  order.setValid(validation.isValid);
+  order.setErrors(validation.errors);
 });
 
 emitter.on('order:payment_address_submit', (data: { payment: 'card' | 'cash'; address: string }): void => {
-  console.log('Payment address submitted:', data); // Debug
+  console.log('Payment address submitted:', data);
   order.setPayment(data.payment);
   order.setAddress(data.address);
-  const validation = order.validateOrder();
+  const validation = order.validateFormPaymentAddres();
+  console.log(validation.isValid)
   if (validation.isValid) {
-    const formElement = cloneTemplate<HTMLFormElement>('#form-email-phone');
+    const formElement = cloneTemplate<HTMLFormElement>('#contacts');
     const form = new FormEmailPhone(formElement, emitter);
-    modal.contentElement = formElement;
+    console.log(validation)
+    emitter.emit('order:payment_address_validated', validation);
     modal.open();
   } else {
     emitter.emit('order:payment_address_validated', validation);
@@ -107,7 +155,7 @@ emitter.on('order:payment_address_submit', (data: { payment: 'card' | 'cash'; ad
 });
 
 emitter.on('order:email_phone_validated', (validation: IValidationResult): void => {
-  console.log('Email phone validated:', validation); // Debug
+  console.log('Email phone validated:', validation);
   const formElement = ensureElement<HTMLFormElement>('.form');
   const form = new FormEmailPhone(formElement, emitter);
   form.setValid(validation.isValid);
@@ -115,7 +163,7 @@ emitter.on('order:email_phone_validated', (validation: IValidationResult): void 
 });
 
 emitter.on('order:email_phone_submit', (data: { email: string; phone: string }): void => {
-  console.log('Email phone submitted:', data); // Debug
+  console.log('Email phone submitted:', data);
   order.setEmail(data.email);
   order.setPhone(data.phone);
   order.setItems(basket.getBasket().items.map((item: IBasketProduct) => ({ id: item.id })));
@@ -124,19 +172,31 @@ emitter.on('order:email_phone_submit', (data: { email: string; phone: string }):
 });
 
 emitter.on('order:success', (result: IOrderResult): void => {
-  console.log('Order success:', result); // Debug
+  console.log('Order success:', result);
   const successElement = cloneTemplate<HTMLElement>('#success');
   const success = new SuccessView(successElement, emitter);
   success.setTotal(result.total);
-  modal.contentElement = successElement;
+  
   modal.open();
   basket.getBasket().items = [];
   basket.getBasket().total = null;
 });
 
 emitter.on('success:close', (): void => {
-  console.log('Success closed'); // Debug
+  console.log('Success closed');
   modal.close();
 });
 
+emitter.on('modal:open', () => {
+    page.locked = true;
+});
+
+// ... и разблокируем
+emitter.on('modal:close', () => {
+    page.locked = false;
+});
+
+
+// Загружаем каталог без автоматического открытия модала
 appState.setCatalog();
+

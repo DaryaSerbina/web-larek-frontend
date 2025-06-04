@@ -27,16 +27,26 @@ export function ensureAllElements<T extends HTMLElement>(selectorElement: Select
 
 export type SelectorElement<T> = T | string;
 
-export function ensureElement<T extends HTMLElement>(selector: string, context: HTMLElement = document.body): T {
-  const element = context.querySelector(selector);
-  if (!element) throw new Error(`Element not found: ${selector}`);
-  return element as T;
+export function ensureElement<T extends HTMLElement>(selectorElement: SelectorElement<T>, context?: HTMLElement): T {
+    if (isSelector(selectorElement)) {
+        const elements = ensureAllElements<T>(selectorElement, context);
+        if (elements.length > 1) {
+            console.warn(`selector ${selectorElement} return more then one element`);
+        }
+        if (elements.length === 0) {
+            throw new Error(`selector ${selectorElement} return nothing`);
+        }
+        return elements.pop() as T;
+    }
+    if (selectorElement instanceof HTMLElement) {
+        return selectorElement as T;
+    }
+    throw new Error('Unknown selector element');
 }
 
-export function cloneTemplate<T extends HTMLElement>(selector: string): T {
-  const template = document.querySelector(selector) as HTMLTemplateElement | null;
-  if (!template) throw new Error(`Template not found: ${selector}`);
-  return template.content.firstElementChild!.cloneNode(true) as T;
+export function cloneTemplate<T extends HTMLElement>(query: string | HTMLTemplateElement): T {
+    const template = ensureElement(query) as HTMLTemplateElement;
+    return template.content.firstElementChild.cloneNode(true) as T;
 }
 
 export function bem(block: string, element?: string, modifier?: string): { name: string, class: string } {

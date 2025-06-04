@@ -1,7 +1,8 @@
 import { IProduct, IBasketProduct } from '../../types';
 import { Component } from '../presenter/Component';
 import { EventEmitter } from '../presenter/events';
-import { ensureElement } from '../utils/utils';
+import { ensureElement, createElement, cloneTemplate } from '../utils/utils';
+import { Card } from './Card';
 
 export class Basket extends Component<HTMLElement> {
   private itemsContainer: HTMLElement;
@@ -11,36 +12,42 @@ export class Basket extends Component<HTMLElement> {
 
   constructor(container: HTMLElement, emitter: EventEmitter) {
     super(container);
-    this.itemsContainer = ensureElement<HTMLElement>('.basket__list', container);
-    this.total = ensureElement<HTMLElement>('.basket__total', container);
+    this.itemsContainer = ensureElement<HTMLElement>('.basket__list', this.container);
+    this.total = ensureElement<HTMLElement>('.basket__price', container);
     this.orderButton = ensureElement<HTMLButtonElement>('.basket__button', container);
     this.emitter = emitter;
 
     this.orderButton.addEventListener('click', () => {
-      this.emitter.emit('basket:open_order');
+      console.log('Попытка открыть корзину')
+      this.emitter.emit('_order');
     });
   }
 
-  setItems(items: IBasketProduct[]): void {
-    this.itemsContainer.innerHTML = '';
-    items.forEach((item: IBasketProduct, index: number) => {
-      const itemElement = document.createElement('li');
-      itemElement.classList.add('basket__item');
-      itemElement.innerHTML = `
-        <span>${index + 1}. ${item.title} - ${item.price ?? 'Бесценно'}</span>
-        <button class="basket__item-delete" data-id="${item.id}">Удалить</button>
-      `;
+setItems(items: IBasketProduct[]): void {
+  this.itemsContainer.innerHTML = ''; // Очищаем контейнер списка
+  if (items.length) {
+    // Если есть товары, создаем элементы корзины
+    items.forEach((item, index) => {
+      const itemElement = cloneTemplate<HTMLElement>('#card-basket');
+      const card = new Card(itemElement, this.emitter, 'basket');
+      card.setTitle(item.title);
+      card.setPrice(item.price);
+      itemElement.querySelector('.basket__item-index')!.textContent = (index + 1).toString();
+      itemElement.querySelector('.basket__item-delete')!.addEventListener('click', () => {
+        this.emitter.emit('basket:remove', { id: item.id });
+      });
       this.itemsContainer.append(itemElement);
     });
-
-    this.itemsContainer.querySelectorAll('.basket__item-delete').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        this.emitter.emit('basket:remove', { id: (btn as HTMLButtonElement).dataset.id });
-      });
-    });
+  } else {
+    // Если корзина пуста, добавляем сообщение
+    console.log(items.length + 'мда')
+    this.itemsContainer.replaceChildren(createElement<HTMLParagraphElement>('p', {
+                textContent: 'Корзина пуста'
+            }));
   }
+}
 
   setTotal(total: number | null): void {
-    this.setText(this.total, total ? `${total} ₽` : '0 ₽');
+    this.setText(this.total, total ? `${total} синапсов` : '0 синапсов');
   }
 }
