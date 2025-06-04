@@ -7,7 +7,7 @@ interface IModalData {
     content: HTMLElement;
 }
 
-export class Modal extends Component<IModalData> {
+export class Modal<T> extends Component<IModalData> {
     protected _closeButton: HTMLButtonElement;
     protected _content: HTMLElement;
 

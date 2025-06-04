@@ -2,13 +2,20 @@ import { IValidationResult } from '../../types';
 import { Component } from '../presenter/Component';
 import { EventEmitter } from '../presenter/events';
 import { ensureElement } from '../utils/utils';
+import { Modal } from './Modal';
 
-export class FormEmailPhone extends Component<HTMLFormElement> {
-  private emailInput: HTMLInputElement;
-  private phoneInput: HTMLInputElement;
-  private submitButton: HTMLButtonElement;
-  private errors: HTMLElement;
-  private emitter: EventEmitter;
+interface IModalData {
+    content: HTMLElement;
+}
+const emitter = new EventEmitter();
+const modal = new Modal(ensureElement<HTMLElement>('.modal'), emitter);
+
+export class FormEmailPhone extends Component<IModalData> {
+  protected emailInput: HTMLInputElement;
+  protected phoneInput: HTMLInputElement;
+  protected submitButton: HTMLButtonElement;
+  protected errors: HTMLElement;
+  protected emitter: EventEmitter;
 
   constructor(container: HTMLFormElement, emitter: EventEmitter) {
     super(container);
@@ -47,5 +54,11 @@ export class FormEmailPhone extends Component<HTMLFormElement> {
   setErrors(errors: string[]): void {
     this.setText(this.errors, errors.join(', '));
   }
+
+  render(data: IModalData): HTMLElement {
+        super.render(data);
+        modal.open();
+        return this.container;
+    }
   
 }

@@ -21,6 +21,8 @@ const page = new Page(document.body, emitter, basket);
 const modal = new Modal(ensureElement<HTMLElement>('.modal'), emitter);
 const orderTemplate = ensureElement<HTMLTemplateElement>('#order');
 const order = new Order(cloneTemplate(orderTemplate), emitter);
+const orderPaymentAdress = ensureElement<HTMLElement>(orderTemplate);
+const orderPaymentAdress1 = new FormEmailPhone(cloneTemplate(orderTemplate), emitter);
 
 emitter.on('catalog:changed', (products: IProduct[]): void => {
   console.log('Catalog changed:', products);
@@ -117,16 +119,7 @@ emitter.on('basket:remove', (data: { id: string }): void => {
 
 emitter.on('_order', (): void => {
   console.log('Opening order form');
-  // const formElement = cloneTemplate<HTMLFormElement>('#order');
-  // const form = new FormPaymentAddress(formElement, emitter);
-  modal.render({
-        content: order.render({
-            phone: '',
-            email: '',
-            valid: false,
-            errors: []
-        })
-    });
+  orderPaymentAdress1.render({content: orderPaymentAdress});
 });
 
 emitter.on('order:payment_address_validated', (validation: IValidationResult): void => {

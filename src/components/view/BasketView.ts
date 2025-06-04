@@ -5,10 +5,10 @@ import { ensureElement, createElement, cloneTemplate } from '../utils/utils';
 import { Card } from './Card';
 
 export class Basket extends Component<HTMLElement> {
-  private itemsContainer: HTMLElement;
-  private total: HTMLElement;
-  private orderButton: HTMLButtonElement;
-  private emitter: EventEmitter;
+  protected itemsContainer: HTMLElement;
+  protected total: HTMLElement;
+  protected orderButton: HTMLButtonElement;
+  protected emitter: EventEmitter;
 
   constructor(container: HTMLElement, emitter: EventEmitter) {
     super(container);

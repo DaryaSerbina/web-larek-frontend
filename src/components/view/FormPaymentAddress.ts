@@ -64,12 +64,4 @@ setPayment(payment: 'card' | 'cash'): void {
   setErrors(errors: string[]): void {
     this.setText(this.errors, errors);
   }
-
-    render(state: Partial<T> & IFormState) {
-        const {valid, errors, ...inputs} = state;
-        super.render({valid, errors});
-        Object.assign(this, inputs);
-        return this.container;
-
-    }
 }

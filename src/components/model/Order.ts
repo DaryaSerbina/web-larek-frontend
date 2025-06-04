@@ -13,7 +13,7 @@ export class Order<T> extends FormPaymentAddress<IOrderForm> {
     total: null,
     items: [],
   };
-  private api: Api;
+  protected api: Api;
   protected emitter: EventEmitter;
 
   constructor(container: HTMLFormElement, emitter: EventEmitter) {
