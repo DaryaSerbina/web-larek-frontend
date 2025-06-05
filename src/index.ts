@@ -16,13 +16,19 @@ import './scss/styles.scss';
 const emitter = new EventEmitter();
 const basket = new Basket(emitter);
 const appState = new AppState(emitter);
-//const order = new Order(emitter);
+
 const page = new Page(document.body, emitter, basket);
 const modal = new Modal(ensureElement<HTMLElement>('.modal'), emitter);
+const orderPaymentAdressTemplate = ensureElement<HTMLTemplateElement>('#order');
+const orderPaymentAdress = new FormPaymentAddress(cloneTemplate(orderPaymentAdressTemplate), emitter);
+const orderEmailPhoneTemplate = ensureElement<HTMLTemplateElement>('#contacts');
+const orderEmailPhone = new FormEmailPhone(cloneTemplate(orderEmailPhoneTemplate), emitter);
 const orderTemplate = ensureElement<HTMLTemplateElement>('#order');
 const order = new Order(cloneTemplate(orderTemplate), emitter);
-const orderPaymentAdress = ensureElement<HTMLElement>(orderTemplate);
-const orderPaymentAdress1 = new FormEmailPhone(cloneTemplate(orderTemplate), emitter);
+const orderSuccessTemplate = ensureElement<HTMLTemplateElement>('#success');
+const orderSuccess = new SuccessView(cloneTemplate(orderSuccessTemplate), emitter);
+
+console.log(orderTemplate, orderPaymentAdressTemplate)
 
 emitter.on('catalog:changed', (products: IProduct[]): void => {
   console.log('Catalog changed:', products);
@@ -83,8 +89,6 @@ emitter.on('basket:changed', (basketData: IBasket): void => {
     const basketView = new BasketView(basketElement, emitter);
     basketView.setItems([]); 
     basketView.setTotal(0); 
-    modal.content = basketElement;
-    modal.open(); 
     return;
   }
 
@@ -93,8 +97,6 @@ emitter.on('basket:changed', (basketData: IBasket): void => {
   const basketView = new BasketView(basketElement, emitter);
   basketView.setItems(basketData.items);
   basketView.setTotal(basketData.total);
-  modal.content = basketElement;
-  modal.open();
 });
 
 emitter.on('basket:add', (data: { id: string }): void => {
@@ -118,16 +120,14 @@ emitter.on('basket:remove', (data: { id: string }): void => {
 });
 
 emitter.on('_order', (): void => {
-  console.log('Opening order form');
-  orderPaymentAdress1.render({content: orderPaymentAdress});
+  console.log('Opening order form:', orderPaymentAdress);
+  orderPaymentAdress.render({content: orderPaymentAdressTemplate});
 });
 
 emitter.on('order:payment_address_validated', (validation: IValidationResult): void => {
   console.log('Payment address validated:', validation);
-  // const formElement = ensureElement<HTMLFormElement>('#order');
-  // const form = new FormPaymentAddress(formElement, emitter);
-  order.setValid(validation.isValid);
-  order.setErrors(validation.errors);
+  orderPaymentAdress.setValid(validation.isValid);
+  orderPaymentAdress.setErrors(validation.errors);
 });
 
 emitter.on('order:payment_address_submit', (data: { payment: 'card' | 'cash'; address: string }): void => {
@@ -137,11 +137,9 @@ emitter.on('order:payment_address_submit', (data: { payment: 'card' | 'cash'; ad
   const validation = order.validateFormPaymentAddres();
   console.log(validation.isValid)
   if (validation.isValid) {
-    const formElement = cloneTemplate<HTMLFormElement>('#contacts');
-    const form = new FormEmailPhone(formElement, emitter);
     console.log(validation)
     emitter.emit('order:payment_address_validated', validation);
-    modal.open();
+    orderEmailPhone.render({content: orderEmailPhoneTemplate});
   } else {
     emitter.emit('order:payment_address_validated', validation);
   }
@@ -149,17 +147,15 @@ emitter.on('order:payment_address_submit', (data: { payment: 'card' | 'cash'; ad
 
 emitter.on('order:email_phone_validated', (validation: IValidationResult): void => {
   console.log('Email phone validated:', validation);
-  const formElement = ensureElement<HTMLFormElement>('.form');
-  const form = new FormEmailPhone(formElement, emitter);
-  form.setValid(validation.isValid);
-  form.setErrors(validation.errors);
+  orderEmailPhone.setValid(validation.isValid);
+  orderEmailPhone.setErrors(validation.errors);
 });
 
 emitter.on('order:email_phone_submit', (data: { email: string; phone: string }): void => {
   console.log('Email phone submitted:', data);
   order.setEmail(data.email);
   order.setPhone(data.phone);
-  order.setItems(basket.getBasket().items.map((item: IBasketProduct) => ({ id: item.id })));
+  order.setItems(basket.getBasket().items.map(item => ({ id: item.id })));;
   order.setTotal(basket.getTotal());
   order.submitOrder();
 });
@@ -168,11 +164,12 @@ emitter.on('order:success', (result: IOrderResult): void => {
   console.log('Order success:', result);
   const successElement = cloneTemplate<HTMLElement>('#success');
   const success = new SuccessView(successElement, emitter);
-  success.setTotal(result.total);
-  
+  const orderTotal = result.total; 
+  basket.clearBasket();
+  success.setTotal(orderTotal);
+  orderSuccess.render({content: orderSuccessTemplate});
+  modal.content = successElement;
   modal.open();
-  basket.getBasket().items = [];
-  basket.getBasket().total = null;
 });
 
 emitter.on('success:close', (): void => {
@@ -184,12 +181,8 @@ emitter.on('modal:open', () => {
     page.locked = true;
 });
 
-// ... и разблокируем
 emitter.on('modal:close', () => {
     page.locked = false;
 });
-
-
-// Загружаем каталог без автоматического открытия модала
 appState.setCatalog();
 

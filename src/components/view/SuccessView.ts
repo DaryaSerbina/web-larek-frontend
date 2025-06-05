@@ -1,26 +1,47 @@
 import { Component } from '../presenter/Component';
 import { EventEmitter } from '../presenter/events';
 import { ensureElement } from '../utils/utils';
+import { Modal } from './Modal';
 
-export class SuccessView extends Component<HTMLElement> {
-  private total: HTMLElement;
-  private closeButton: HTMLButtonElement;
-  private emitter: EventEmitter;
+interface IModalData {
+	content: HTMLElement;
+}
+const emitter = new EventEmitter();
+const modal = new Modal(ensureElement<HTMLElement>('.modal'), emitter);
 
-  constructor(container: HTMLElement, emitter: EventEmitter) {
-    super(container);
-    this.total = ensureElement<HTMLElement>('.order-success__total', container);
-    this.closeButton = ensureElement<HTMLButtonElement>('.order-success__close', container);
-    this.emitter = emitter;
+export class SuccessView extends Component<IModalData> {
+	private total: HTMLElement;
+	private closeButton: HTMLButtonElement;
+	private emitter: EventEmitter;
 
-    this.closeButton.addEventListener('click', () => this.handleCloseClick());
-  }
+	constructor(container: HTMLElement, emitter: EventEmitter) {
+		super(container);
+		this.total = ensureElement<HTMLElement>(
+			'.order-success__description',
+			container
+		);
+		this.closeButton = ensureElement<HTMLButtonElement>(
+			'.order-success__close',
+			container
+		);
+		this.emitter = emitter;
 
-  setTotal(total: number | null): void {
-    this.setText(this.total, total ? `${total} ₽` : '0 ₽');
-  }
+		this.closeButton.addEventListener('click', () => this.handleCloseClick());
+	}
 
-  handleCloseClick(): void {
-    this.emitter.emit('success:close');
-  }
+	setTotal(total: number | null): void {
+		this.setText(this.total, total ? `${total} синапсов` : '0 синапсов');
+	}
+
+	handleCloseClick(): void {
+		this.emitter.emit('success:close');
+	}
+
+	render(data: IModalData): HTMLElement {
+		super.render(data);
+		modal.content = this.container;
+		console.log(modal.content);
+		modal.open();
+		return this.container;
+	}
 }

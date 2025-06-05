@@ -2,9 +2,9 @@ import { IProduct, IBasket, IBasketProduct } from '../../types';
 import { EventEmitter } from '../presenter/events';
 
 export class Basket {
-	private items: IBasketProduct[] = [];
-	private total: number | null = null;
-	private emitter: EventEmitter;
+	protected items: IBasketProduct[] = [];
+	protected total: number | null = null;
+	protected emitter: EventEmitter;
 
 	constructor(emitter: EventEmitter) {
 		this.emitter = emitter;
@@ -33,12 +33,19 @@ export class Basket {
 		this.emitter.emit('basket:changed', this.getBasket());
 	}
 
+	clearBasket(): void {
+		const lastTotal = this.total;
+		this.items = [];
+		this.total = null;
+		this.emitter.emit('basket:changed', { items: [], total: lastTotal });
+	}
+
 	getTotal(): number | null {
 		return this.total;
 	}
 
 	getBasket(): IBasket {
-    console.log('Returning basket:', { items: this.items, total: this.total });
+		console.log('Returning basket:', { items: this.items, total: this.total });
 		return { items: this.items, total: this.total || null };
 	}
 
