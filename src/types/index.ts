@@ -40,5 +40,5 @@ export interface IOrderResult {
 
 export interface IValidationResult {
   isValid: boolean;
-  errors: string[];
+  errors: string[] | undefined;
 }

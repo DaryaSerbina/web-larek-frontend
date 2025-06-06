@@ -1,4 +1,3 @@
-import { IValidationResult } from '../../types';
 import { Component } from '../presenter/Component';
 import { EventEmitter } from '../presenter/events';
 import { ensureElement } from '../utils/utils';
@@ -11,11 +10,11 @@ const emitter = new EventEmitter();
 const modal = new Modal(ensureElement<HTMLElement>('.modal'), emitter);
 
 export class FormEmailPhone extends Component<IModalData> {
-	protected emailInput: HTMLInputElement;
-	protected phoneInput: HTMLInputElement;
-	protected submitButton: HTMLButtonElement;
-	protected errors: HTMLElement;
-	protected emitter: EventEmitter;
+	private emailInput: HTMLInputElement;
+	private phoneInput: HTMLInputElement;
+	private submitButton: HTMLButtonElement;
+	private errors: HTMLElement;
+	private emitter: EventEmitter;
 
 	constructor(container: HTMLFormElement, emitter: EventEmitter) {
 		super(container);
@@ -31,8 +30,10 @@ export class FormEmailPhone extends Component<IModalData> {
 		this.errors = ensureElement<HTMLElement>('.form__errors', container);
 		this.emitter = emitter;
 
-		this.emailInput.addEventListener('input', this.validateFields.bind(this));
-		this.phoneInput.addEventListener('input', this.validateFields.bind(this));
+		this.emailInput.addEventListener('input', this.checkValidity.bind(this));
+		this.phoneInput.addEventListener('input', this.checkValidity.bind(this));
+
+		this.submitButton.disabled = true;
 
 		this.submitButton.addEventListener('click', (e) => {
 			e.preventDefault();
@@ -43,29 +44,34 @@ export class FormEmailPhone extends Component<IModalData> {
 		});
 	}
 
-	validateFields() {
-		const validation = {
+	private isFormValid(): boolean {
+		return !!this.emailInput.value && !!this.phoneInput.value;
+	}
+
+	checkValidity(): void {
+		const isValid = this.isFormValid();
+		this.submitButton.disabled = !isValid;
+		this.emitter.emit('order:email_phone_validated', {
 			email: this.emailInput.value,
 			phone: this.phoneInput.value,
-		};
-		this.emitter.emit('order:email_phone_validated', validation);
+			isValid,
+		});
 	}
 
 	setValid(isValid: boolean): void {
-		this.setDisabled(this.submitButton, isValid);
+		this.submitButton.disabled = !isValid;
 	}
 
-	setErrors(errors: string[]): void {
-		this.setText(this.errors, errors);
+	setErrors(errors: string[] | undefined): void {
+		if (errors !== undefined) {
+			this.setText(this.errors, errors);
+		}
 	}
 
 	render(data: IModalData): HTMLElement {
 		super.render(data);
 		modal.content = this.container;
-
-		console.log(modal.content);
 		modal.open();
-
 		return this.container;
 	}
 }

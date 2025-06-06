@@ -7,14 +7,10 @@ import {
 import { EventEmitter } from '../presenter/events';
 import { Api } from '../presenter/api';
 import { API_URL } from '../utils/constants';
-import { FormPaymentAddress } from '../view/FormPaymentAddress';
-import { Basket } from './Basket';
+import { Component } from '../presenter/Component';
 
-const emitter = new EventEmitter();
-const basket = new Basket(emitter);
-
-export class Order<T> extends FormPaymentAddress<IOrderForm> {
-	protected order: IOrderForm = {
+export class Order<T> extends Component<IOrderForm> {
+	order: IOrderForm = {
 		payment: 'card',
 		email: '',
 		phone: '',
@@ -22,18 +18,19 @@ export class Order<T> extends FormPaymentAddress<IOrderForm> {
 		total: null,
 		items: [],
 	};
-	protected api: Api;
-	protected emitter: EventEmitter;
+
+	protected _api: Api;
+	protected _emitter: EventEmitter;
 
 	constructor(container: HTMLFormElement, emitter: EventEmitter) {
-		super(container, emitter);
-		this.api = new Api(API_URL);
-		this.emitter = emitter;
+		super(container);
+		this._api = new Api(API_URL);
+		this._emitter = emitter;
 	}
 
 	setAddress(address: string): void {
 		this.order.address = address;
-		this.emitter.emit('order:payment_address_validated', this.validateOrder());
+		this._emitter.emit('order:payment_address_validated', this.validateOrder());
 	}
 
 	setEmail(email: string): void {
@@ -55,7 +52,6 @@ export class Order<T> extends FormPaymentAddress<IOrderForm> {
 	validateFormPaymentAddres(): IValidationResult {
 		const errors: string[] = [];
 		if (!this.order.address.trim()) errors.push('Address is required');
-		console.log(errors);
 		return { isValid: errors.length === 0, errors };
 	}
 
@@ -76,40 +72,30 @@ export class Order<T> extends FormPaymentAddress<IOrderForm> {
 		return { isValid: errors.length === 0, errors };
 	}
 
-	async submitOrder(): Promise<void> {
+	async submitOrder(requestData: IOrderForm): Promise<void> {
 		const validation = this.validateOrder();
 		if (!validation.isValid) {
 			return;
 		}
 
-		const basketItems = basket.getBasket().items;
-
-		const paidItems = basketItems.filter((item) => item.price !== null);
-
-		if (paidItems.length === 0) {
-			this.emitter.emit('order:email_phone_validated', {
-				isValid: false,
-				errors: ['Нельзя оформить заказ только с бесценными товарами'],
-			});
-			return;
-		}
-
-		const requestData = {
-			...this.order,
-			items: paidItems.map((item) => item.id),
-			total: paidItems.reduce((sum, item) => sum + (item.price || 0), 0),
-		};
-
 		try {
-			console.log('Отправка заказа:', requestData);
-			const response = (await this.api.post(
+			const apiPayload = {
+				payment: this.order.payment,
+				email: requestData.email,
+				phone: requestData.phone,
+				address: this.order.address,
+				total: requestData.total,
+				items: requestData.items.map((item) => item.id),
+			};
+
+			const response = (await this._api.post(
 				'/order',
-				requestData
+				apiPayload
 			)) as IOrderResult;
-			this.emitter.emit('order:success', response);
+			this._emitter.emit('order:success', response);
 		} catch (error) {
 			console.error('Ошибка оформления заказа:', error);
-			this.emitter.emit('order:email_phone_validated', {
+			this._emitter.emit('order:email_phone_validated', {
 				isValid: false,
 				errors: ['Ошибка при оформлении заказа'],
 			});

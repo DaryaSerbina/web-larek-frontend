@@ -1,13 +1,7 @@
-import { IValidationResult, IOrderForm } from '../../types';
 import { Component } from '../presenter/Component';
 import { EventEmitter } from '../presenter/events';
 import { ensureElement } from '../utils/utils';
 import { Modal } from './Modal';
-
-interface IFormState {
-	valid: boolean;
-	errors: string[];
-}
 
 interface IModalData {
 	content: HTMLElement;
@@ -15,12 +9,12 @@ interface IModalData {
 const emitter = new EventEmitter();
 const modal = new Modal(ensureElement<HTMLElement>('.modal'), emitter);
 
-export class FormPaymentAddress<T> extends Component<IModalData> {
-	protected paymentButtons: NodeListOf<HTMLButtonElement>;
-	protected addressInput: HTMLInputElement;
-	protected submitButton: HTMLButtonElement;
-	protected errors: HTMLElement;
-	protected emitter: EventEmitter;
+export class FormPaymentAddress extends Component<IModalData> {
+	private paymentButtons: NodeListOf<HTMLButtonElement>;
+	private addressInput: HTMLInputElement;
+	private submitButton: HTMLButtonElement;
+	private errors: HTMLElement;
+	private emitter: EventEmitter;
 
 	constructor(container: HTMLFormElement, emitter: EventEmitter) {
 		super(container);
@@ -36,53 +30,54 @@ export class FormPaymentAddress<T> extends Component<IModalData> {
 		this.errors = ensureElement<HTMLElement>('.form__errors', container);
 		this.emitter = emitter;
 
+		this.submitButton.disabled = true;
+
 		this.paymentButtons.forEach((btn) => {
-			btn.addEventListener(
-				'click',
-				this.setPayment.bind(this, btn.name as 'card' | 'cash')
-			);
+			btn.addEventListener('click', () => {
+				this.setPayment(btn.name as 'card' | 'cash');
+				this.checkValidity();
+			});
 		});
 
 		this.addressInput.addEventListener('input', () => {
-			this.emitter.emit('order:payment_address_validated', {
-				payment: this.container.dataset.payment,
-				address: this.addressInput.value,
-			});
+			this.checkValidity();
 		});
 
 		this.submitButton.addEventListener('click', (e) => {
 			e.preventDefault();
-			this.emitter.emit('order:payment_address_submit', {
-				payment: this.container.dataset.payment,
-				address: this.addressInput.value,
-			});
+			if (this.container.dataset.payment && this.addressInput.value) {
+				this.emitter.emit('order:payment_address_submit', {
+					payment: this.container.dataset.payment as 'card' | 'cash',
+					address: this.addressInput.value,
+				});
+			}
 		});
+	}
+
+	private checkValidity(): void {
+		const isValid =
+			!!this.container.dataset.payment && !!this.addressInput.value;
+		this.submitButton.disabled = !isValid;
 	}
 
 	setPayment(payment: 'card' | 'cash'): void {
 		this.container.dataset.payment = payment;
 		this.paymentButtons.forEach((btn) => {
-			const isSelected = btn.name === payment;
-			if (isSelected) {
-				btn.classList.add('button_alt-active');
-			} else {
-				btn.classList.remove('button_alt-active');
-			}
+			btn.classList.toggle('button_alt-active', btn.name === payment);
 		});
 	}
 
 	setValid(isValid: boolean): void {
-		this.setDisabled(this.submitButton, isValid);
+		this.submitButton.disabled = !isValid;
 	}
 
-	setErrors(errors: string[]): void {
-		this.setText(this.errors, errors);
+	setErrors(errors: string[] | undefined): void {
+		this.errors.textContent = errors?.join(', ') || '';
 	}
 
 	render(data: IModalData): HTMLElement {
 		super.render(data);
 		modal.content = this.container;
-		console.log(modal.content);
 		modal.open();
 		return this.container;
 	}

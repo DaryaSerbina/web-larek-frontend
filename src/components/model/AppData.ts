@@ -24,7 +24,6 @@ export class AppState {
 						? item.image
 						: 'https://placehold.co/100x100',
 			}));
-			console.log('Catalog loaded:', this.catalog);
 			this.emitter.emit('catalog:changed', this.catalog);
 		} catch (error) {
 			console.error('Failed to fetch catalog:', error);
@@ -35,7 +34,6 @@ export class AppState {
 
 	setPreview(product: IProduct | null): void {
 		this.preview = product;
-		console.log('Setting preview:', product);
 		this.emitter.emit('preview:changed', this.preview);
 	}
 

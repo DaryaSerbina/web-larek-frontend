@@ -2,16 +2,16 @@ import { IProduct, IBasket, IBasketProduct } from '../../types';
 import { EventEmitter } from '../presenter/events';
 
 export class Basket {
-	protected items: IBasketProduct[] = [];
-	protected total: number | null = null;
-	protected emitter: EventEmitter;
+	protected _items: IBasketProduct[] = [];
+	protected _total: number | null = null;
+	protected _emitter: EventEmitter;
 
 	constructor(emitter: EventEmitter) {
-		this.emitter = emitter;
+		this._emitter = emitter;
 	}
 
 	addToBasket(product: IProduct): void {
-		const existingProduct = this.items.find((item) => item.id === product.id);
+		const existingProduct = this._items.find((item) => item.id === product.id);
 		if (!existingProduct) {
 			const basketProduct: IBasketProduct = {
 				id: product.id,
@@ -19,41 +19,38 @@ export class Basket {
 				price: product.price,
 				isInBasket: true,
 			};
-			this.items.push(basketProduct);
+			this._items.push(basketProduct);
 			this.updateTotal();
-			console.log('Added to basket:', basketProduct); // Debug
-			this.emitter.emit('basket:changed', this.getBasket());
+			this._emitter.emit('basket:changed', this.getBasket());
 		}
 	}
 
 	removeFromBasket(productId: string): void {
-		this.items = this.items.filter((item) => item.id !== productId);
+		this._items = this._items.filter((item) => item.id !== productId);
 		this.updateTotal();
-		console.log('Removed from basket, new items:', this.items); // Debug
-		this.emitter.emit('basket:changed', this.getBasket());
+		this._emitter.emit('basket:changed', this.getBasket());
 	}
 
 	clearBasket(): void {
-		const lastTotal = this.total;
-		this.items = [];
-		this.total = null;
-		this.emitter.emit('basket:changed', { items: [], total: lastTotal });
+		const lastTotal = this._total;
+		this._items = [];
+		this._total = null;
+		this._emitter.emit('basket:changed', { items: [], total: lastTotal });
 	}
 
 	getTotal(): number | null {
-		return this.total;
+		return this._total;
 	}
 
 	getBasket(): IBasket {
-		console.log('Returning basket:', { items: this.items, total: this.total });
-		return { items: this.items, total: this.total || null };
+		return { items: this._items, total: this._total || null };
 	}
 
 	setSelected(state: boolean): void {
-		this.emitter.emit('basket:selected', { state });
+		this._emitter.emit('basket:selected', { state });
 	}
 
-	private updateTotal(): void {
-		this.total = this.items.reduce((sum, item) => sum + (item.price ?? 0), 0);
+	updateTotal(): void {
+		this._total = this._items.reduce((sum, item) => sum + (item.price ?? 0), 0);
 	}
 }

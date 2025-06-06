@@ -31,11 +31,15 @@ export class Modal<T> extends Component<IModalData> {
 	open() {
 		this.container.classList.add('modal_active');
 		this.events.emit('modal:open');
-		console.log('услышал');
 	}
 
 	close() {
-		console.log(this.container);
+		const input = this.container.querySelector(
+			'.form__input'
+		) as HTMLInputElement;
+		if (input) {
+			input.value = '';
+		}
 		this.container.classList.remove('modal_active');
 		this.content = null;
 		this.events.emit('modal:close');

@@ -18,14 +18,6 @@ export abstract class Component<T> {
 		}
 	}
 
-	protected setHidden(element: HTMLElement) {
-		element.style.display = 'none';
-	}
-
-	protected setVisible(element: HTMLElement) {
-		element.style.removeProperty('display');
-	}
-
 	protected setImage(element: HTMLImageElement, src: string, alt?: string) {
 		if (element) {
 			element.src = src;

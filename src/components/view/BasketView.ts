@@ -1,40 +1,46 @@
-import { IProduct, IBasketProduct } from '../../types';
+import { IBasketProduct } from '../../types';
 import { Component } from '../presenter/Component';
 import { EventEmitter } from '../presenter/events';
-import { ensureElement, createElement, cloneTemplate } from '../utils/utils';
+import { ensureElement, cloneTemplate } from '../utils/utils';
 import { Card } from './Card';
 
 export class Basket extends Component<HTMLElement> {
-	protected itemsContainer: HTMLElement;
-	protected total: HTMLElement;
-	protected orderButton: HTMLButtonElement;
-	protected emitter: EventEmitter;
+	protected _itemsContainer: HTMLElement;
+	protected _total: HTMLElement;
+	protected _orderButton: HTMLButtonElement;
+	protected _emitter: EventEmitter;
+	protected _items: IBasketProduct[] = [];
 
 	constructor(container: HTMLElement, emitter: EventEmitter) {
 		super(container);
-		this.itemsContainer = ensureElement<HTMLElement>(
+		this._itemsContainer = ensureElement<HTMLElement>(
 			'.basket__list',
 			this.container
 		);
-		this.total = ensureElement<HTMLElement>('.basket__price', container);
-		this.orderButton = ensureElement<HTMLButtonElement>(
+		this._total = ensureElement<HTMLElement>('.basket__price', container);
+		this._orderButton = ensureElement<HTMLButtonElement>(
 			'.basket__button',
 			container
 		);
-		this.emitter = emitter;
+		this._emitter = emitter;
 
-		this.orderButton.addEventListener('click', () => {
-			console.log('Попытка открыть корзину');
-			this.emitter.emit('_order');
+		this._orderButton.addEventListener('click', () => {
+			this._emitter.emit('_order');
 		});
+
+		this._orderButton.disabled = true;
 	}
 
 	setItems(items: IBasketProduct[]): void {
-		this.itemsContainer.innerHTML = '';
+		this._items = items;
+		this._itemsContainer.innerHTML = '';
+		this._orderButton.disabled = items.length === 0;
 		if (items.length) {
+			const totalPrice = items.reduce((sum, item) => sum + item.price, 0);
+			this.setTotal(totalPrice);
 			items.forEach((item, index) => {
 				const itemElement = cloneTemplate<HTMLElement>('#card-basket');
-				const card = new Card(itemElement, this.emitter, 'basket');
+				const card = new Card(itemElement, this._emitter, 'basket');
 				card.setTitle(item.title);
 				card.setPrice(item.price);
 				itemElement.querySelector('.basket__item-index')!.textContent = (
@@ -43,21 +49,19 @@ export class Basket extends Component<HTMLElement> {
 				itemElement
 					.querySelector('.basket__item-delete')!
 					.addEventListener('click', () => {
-						this.emitter.emit('basket:remove', { id: item.id });
+						const updatedItems = items.filter((i) => i.id !== item.id);
+						this.setItems(updatedItems);
+						this._emitter.emit('basket:remove', { id: item.id });
 					});
-				this.itemsContainer.append(itemElement);
+
+				this._itemsContainer.append(itemElement);
 			});
 		} else {
-			console.log(items.length + 'мда');
-			this.itemsContainer.replaceChildren(
-				createElement<HTMLParagraphElement>('p', {
-					textContent: 'Корзина пуста',
-				})
-			);
+			this.setTotal(0);
 		}
 	}
 
 	setTotal(total: number | null): void {
-		this.setText(this.total, total ? `${total} синапсов` : '0 синапсов');
+		this.setText(this._total, total ? `${total} синапсов` : '0 синапсов');
 	}
 }

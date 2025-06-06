@@ -40,7 +40,6 @@ export class SuccessView extends Component<IModalData> {
 	render(data: IModalData): HTMLElement {
 		super.render(data);
 		modal.content = this.container;
-		console.log(modal.content);
 		modal.open();
 		return this.container;
 	}
