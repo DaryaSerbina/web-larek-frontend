@@ -1,10 +1,9 @@
 import { IBasketProduct } from '../../types';
 import { Component } from '../presenter/Component';
 import { EventEmitter } from '../presenter/events';
-import { ensureElement, cloneTemplate } from '../utils/utils';
-import { Card } from './Card';
+import { ensureElement } from '../utils/utils';
 
-export class Basket extends Component<HTMLElement> {
+export class Basket extends Component<IBasketProduct> {
 	protected _itemsContainer: HTMLElement;
 	protected _total: HTMLElement;
 	protected _orderButton: HTMLButtonElement;
@@ -31,34 +30,9 @@ export class Basket extends Component<HTMLElement> {
 		this._orderButton.disabled = true;
 	}
 
-	setItems(items: IBasketProduct[]): void {
-		this._items = items;
-		this._itemsContainer.innerHTML = '';
+	setItems(items: HTMLElement[]): void {
+		this._itemsContainer.replaceChildren(...items);
 		this._orderButton.disabled = items.length === 0;
-		if (items.length) {
-			const totalPrice = items.reduce((sum, item) => sum + item.price, 0);
-			this.setTotal(totalPrice);
-			items.forEach((item, index) => {
-				const itemElement = cloneTemplate<HTMLElement>('#card-basket');
-				const card = new Card(itemElement, this._emitter, 'basket');
-				card.setTitle(item.title);
-				card.setPrice(item.price);
-				itemElement.querySelector('.basket__item-index')!.textContent = (
-					index + 1
-				).toString();
-				itemElement
-					.querySelector('.basket__item-delete')!
-					.addEventListener('click', () => {
-						const updatedItems = items.filter((i) => i.id !== item.id);
-						this.setItems(updatedItems);
-						this._emitter.emit('basket:remove', { id: item.id });
-					});
-
-				this._itemsContainer.append(itemElement);
-			});
-		} else {
-			this.setTotal(0);
-		}
 	}
 
 	setTotal(total: number | null): void {

@@ -1,15 +1,8 @@
 import { Component } from '../presenter/Component';
 import { EventEmitter } from '../presenter/events';
 import { ensureElement } from '../utils/utils';
-import { Modal } from './Modal';
 
-interface IModalData {
-	content: HTMLElement;
-}
-const emitter = new EventEmitter();
-const modal = new Modal(ensureElement<HTMLElement>('.modal'), emitter);
-
-export class SuccessView extends Component<IModalData> {
+export class SuccessView extends Component<HTMLElement> {
 	private total: HTMLElement;
 	private closeButton: HTMLButtonElement;
 	private emitter: EventEmitter;
@@ -35,12 +28,5 @@ export class SuccessView extends Component<IModalData> {
 
 	handleCloseClick(): void {
 		this.emitter.emit('success:close');
-	}
-
-	render(data: IModalData): HTMLElement {
-		super.render(data);
-		modal.content = this.container;
-		modal.open();
-		return this.container;
 	}
 }

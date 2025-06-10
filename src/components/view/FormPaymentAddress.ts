@@ -1,15 +1,8 @@
 import { Component } from '../presenter/Component';
 import { EventEmitter } from '../presenter/events';
 import { ensureElement } from '../utils/utils';
-import { Modal } from './Modal';
 
-interface IModalData {
-	content: HTMLElement;
-}
-const emitter = new EventEmitter();
-const modal = new Modal(ensureElement<HTMLElement>('.modal'), emitter);
-
-export class FormPaymentAddress extends Component<IModalData> {
+export class FormPaymentAddress extends Component<HTMLElement> {
 	private paymentButtons: NodeListOf<HTMLButtonElement>;
 	private addressInput: HTMLInputElement;
 	private submitButton: HTMLButtonElement;
@@ -73,12 +66,5 @@ export class FormPaymentAddress extends Component<IModalData> {
 
 	setErrors(errors: string[] | undefined): void {
 		this.errors.textContent = errors?.join(', ') || '';
-	}
-
-	render(data: IModalData): HTMLElement {
-		super.render(data);
-		modal.content = this.container;
-		modal.open();
-		return this.container;
 	}
 }

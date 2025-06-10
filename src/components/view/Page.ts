@@ -1,8 +1,6 @@
 import { Component } from '../presenter/Component';
 import { EventEmitter } from '../presenter/events';
-import { Card } from './Card';
-import { IProduct } from '../../types';
-import { ensureElement, cloneTemplate } from '../utils/utils';
+import { ensureElement } from '../utils/utils';
 import { Basket } from '../model/Basket';
 
 export class Page extends Component<HTMLElement> {
@@ -33,20 +31,8 @@ export class Page extends Component<HTMLElement> {
 		this.setText(this._counter, count.toString());
 	}
 
-	setCatalog(products: IProduct[]) {
-		this._catalog.innerHTML = '';
-		products.forEach((product) => {
-			const cardElement = cloneTemplate<HTMLElement>('#card-catalog');
-			cardElement.dataset.id = product.id;
-			const card = new Card(cardElement, this._emitter, 'catalog');
-			card.setTitle(product.title);
-			card.setImageSrc(product.image);
-			card.setPrice(product.price);
-			this._catalog.append(cardElement);
-			cardElement.addEventListener('click', () => {
-				this._emitter.emit('card:select', product);
-			});
-		});
+	setCatalog(items: HTMLElement[]) {
+		this._catalog.replaceChildren(...items); // Просто вставляет готовые элементы
 	}
 
 	set locked(value: boolean) {

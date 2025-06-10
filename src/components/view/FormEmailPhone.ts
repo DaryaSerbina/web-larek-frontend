@@ -1,15 +1,8 @@
 import { Component } from '../presenter/Component';
 import { EventEmitter } from '../presenter/events';
 import { ensureElement } from '../utils/utils';
-import { Modal } from './Modal';
 
-interface IModalData {
-	content: HTMLElement;
-}
-const emitter = new EventEmitter();
-const modal = new Modal(ensureElement<HTMLElement>('.modal'), emitter);
-
-export class FormEmailPhone extends Component<IModalData> {
+export class FormEmailPhone extends Component<HTMLElement> {
 	private emailInput: HTMLInputElement;
 	private phoneInput: HTMLInputElement;
 	private submitButton: HTMLButtonElement;
@@ -66,12 +59,5 @@ export class FormEmailPhone extends Component<IModalData> {
 		if (errors !== undefined) {
 			this.setText(this.errors, errors);
 		}
-	}
-
-	render(data: IModalData): HTMLElement {
-		super.render(data);
-		modal.content = this.container;
-		modal.open();
-		return this.container;
 	}
 }

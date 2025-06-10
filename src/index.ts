@@ -13,7 +13,6 @@ import { ensureElement, cloneTemplate } from './components/utils/utils';
 import {
 	IProduct,
 	IOrderResult,
-	IBasketProduct,
 	IBasket,
 	IValidationResult,
 	IOrderForm,
@@ -39,28 +38,37 @@ const orderEmailPhone = new FormEmailPhone(
 const orderTemplate = ensureElement<HTMLTemplateElement>('#order');
 const order = new Order(cloneTemplate(orderTemplate), emitter);
 const orderSuccessTemplate = ensureElement<HTMLTemplateElement>('#success');
-const orderSuccess = new SuccessView(
-	cloneTemplate(orderSuccessTemplate),
-	emitter
-);
+const basketElement = cloneTemplate<HTMLElement>('#basket');
+const basketView = new BasketView(basketElement, emitter);
+
+
 
 emitter.on('catalog:changed', (products: IProduct[]): void => {
-	if (products.length === 0) {
-		console.warn('No products to display');
-		page.setCatalog([
-			{
-				id: 'placeholder',
-				title: 'Нет товаров',
-				image: 'https://placehold.co/100x100',
-				price: null,
-				description: '',
-				category: '',
-			},
-		]);
-	} else {
-		page.setCatalog(products);
-	}
+    if (products.length === 0) {
+        console.warn('No products to display');       
+    } else {
+        page.setCatalog(
+            products.map(product => {
+                const cardElement = cloneTemplate<HTMLElement>('#card-catalog');
+                cardElement.dataset.id = product.id;
+                
+                const card = new Card(cardElement, emitter, 'catalog');
+                card.setTitle(product.title);
+                card.setImageSrc(product.image);
+                card.setPrice(product.price);
+                card.setCategory(product.category);
+                card.setDescription(product.description);
+                
+                cardElement.addEventListener('click', () => {
+                    emitter.emit('card:select', product);
+                });
+                
+                return cardElement;
+            })
+        );
+    }
 });
+
 
 emitter.on('card:select', (product: IProduct): void => {
 	appState.setPreview(product);
@@ -88,30 +96,60 @@ emitter.on('preview:changed', (product: IProduct | null): void => {
 	}
 });
 
-emitter.on('basket:open', (): void => {
-	const basketElement = cloneTemplate<HTMLElement>('#basket');
-	const basketView = new BasketView(basketElement, emitter);
-	basketView.setItems(basket.getBasket().items);
-	basketView.setTotal(basket.getBasket().total);
-	modal.content = basketElement;
-	modal.open();
+emitter.on('basket:open', (): void => {   
+    // Создаём элементы карточек
+    const itemsElements = basket.getBasket().items.map((item, index) => {
+        const itemElement = cloneTemplate<HTMLElement>('#card-basket');
+        const card = new Card(itemElement, emitter, 'basket');
+        
+        card.setTitle(item.title);
+        card.setPrice(item.price);
+        
+        itemElement.querySelector('.basket__item-index')!.textContent = 
+            (index + 1).toString();
+        
+        itemElement.querySelector('.basket__item-delete')!
+            .addEventListener('click', () => {
+                emitter.emit('basket:remove', { id: item.id });
+            });
+        
+        return itemElement;
+    });
+    
+    // Передаём готовые элементы
+    basketView.setItems(itemsElements);
+    basketView.setTotal(basket.getBasket().total);
+    
+    modal.content = basketElement;
+    modal.open();
 });
 
-emitter.on('basket:changed', (basketData: IBasket): void => {
-	if (basketData === undefined) {
-		page.setCounter(0);
-		const basketElement = cloneTemplate<HTMLElement>('#basket');
-		const basketView = new BasketView(basketElement, emitter);
-		basketView.setItems([]);
-		basketView.setTotal(0);
-		return;
-	}
 
-	page.setCounter(basketData.items.length);
-	const basketElement = cloneTemplate<HTMLElement>('#basket');
-	const basketView = new BasketView(basketElement, emitter);
-	basketView.setItems(basketData.items);
-	basketView.setTotal(basketData.total);
+
+emitter.on('basket:changed', (basketData: IBasket) => {
+    const itemsElements = basket.getBasket().items.map((item, index) => {
+        const itemElement = cloneTemplate<HTMLElement>('#card-basket');
+        const card = new Card(itemElement, emitter, 'basket');
+        
+        card.setTitle(item.title);
+        card.setPrice(item.price);
+        
+        itemElement.querySelector('.basket__item-index')!.textContent = 
+            (index + 1).toString();
+        
+        itemElement.querySelector('.basket__item-delete')!
+            .addEventListener('click', () => {
+                emitter.emit('basket:remove', { id: item.id });
+            });
+        
+        return itemElement;
+    });
+    
+    // Передаём готовые элементы в корзину
+    basketView.setItems(itemsElements);
+    basketView.setTotal(basketData.total);
+		page.setCounter(basketData.items.length);
+
 });
 
 emitter.on('basket:add', (data: { id: string }): void => {
@@ -128,12 +166,17 @@ emitter.on('basket:add', (data: { id: string }): void => {
 	}
 });
 
+
 emitter.on('basket:remove', (data: { id: string }): void => {
-	basket.removeFromBasket(data.id);
+	  basket.removeFromBasket(data.id); // Обновляем модель
+    emitter.emit('basket:changed', basket.getBasket()); // Обновляем view
 });
 
+
 emitter.on('_order', (): void => {
-	orderPaymentAdress.render({ content: orderPaymentAdressTemplate });
+    const content = cloneTemplate(orderPaymentAdressTemplate) as HTMLFormElement;
+    const form = new FormPaymentAddress(content, emitter);
+    modal.render({ content: content });
 });
 
 emitter.on(
@@ -152,7 +195,9 @@ emitter.on(
 		const validation = order.validateFormPaymentAddres();
 		if (validation.isValid) {
 			emitter.emit('order:payment_address_validated', validation);
-			orderEmailPhone.render({ content: orderEmailPhoneTemplate });
+    	const content = cloneTemplate(orderEmailPhoneTemplate) as HTMLFormElement;
+    	const form = new FormEmailPhone(content, emitter);
+    	modal.render({ content: content });
 		} else {
 			emitter.emit('order:payment_address_validated', validation);
 		}
@@ -204,7 +249,9 @@ emitter.on('order:success', (result: IOrderResult): void => {
 	const orderTotal = result.total;
 	basket.clearBasket();
 	success.setTotal(orderTotal);
-	orderSuccess.render({ content: orderSuccessTemplate });
+  const content = cloneTemplate(orderSuccessTemplate) as HTMLFormElement;
+  const form = new SuccessView(content, emitter);
+  modal.render({ content: content });
 	modal.content = successElement;
 	modal.open();
 });

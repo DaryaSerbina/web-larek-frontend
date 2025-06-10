@@ -27,6 +27,14 @@ export abstract class Component<T> {
 		}
 	}
 
+	protected categoryColors = <Record<string, string>>{ 
+     "софт-скил": 'soft', 
+     "другое": 'other', 
+     "кнопка": 'button', 
+     "хард-скил": 'hard', 
+     "дополнительное": 'additional' 
+}
+
 	render(data?: Partial<T>): HTMLElement {
 		Object.assign(this as object, data ?? {});
 		return this.container;
